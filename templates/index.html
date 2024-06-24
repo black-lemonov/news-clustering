@@ -3,38 +3,26 @@
     <head>
         <meta charset="utf-8">
         <title>{{title}}</title>
-
-        <link rel="shortcut icon" href="{{url_for('static', filename='П.ico')}}"> 
-
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
-    
-        <link rel="stylesheet" href="{{url_for('static', filename='styles.css')}}" >
+        <link rel="shortcut icon" href="static\Н.ico">
+        <link rel="stylesheet" href="static\styles.css">
     </head>
     <body>
         <header>
-            <h1 class="main-title_left-gapped">{{title}}</h1>
+            <h1 class="main-header">{{title}}</h1>
         </header>
         <main>
-            <form class="path-form_left-gapped" action="" method="get">
-                <label class="path-form__label">Вставьте URL:</label>
-
-                <input class="path-form__input" type="search" name="src-url" autocomplete="off" autofocus>
-                
-                <input class="path-form__submit" type="submit" value={{button}}>
-            </form>
-
-            <form class="output-form_left-gapped">
-                <label class="output-form__label">Вывод:</label>
-                
-                <textarea class="output-form__textarea" autocomplete="off" rows="8">
-                    {%- for line in output -%}
-                    {{ loop.index}}. {{ line }} &#10;
-                    {%- endfor -%}
-                </textarea>
-            </form>
+            {% for cluster in clusters %}
+                <ul class="cluster_green">
+                {% for news in cluster %}
+                    <li class="cluster__news_green">
+                    {{news[1]}} : <a class="src-link_green" href="{{news[0]}}">источник.</a>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% endfor %}
         </main>
     </body>
 </html>
