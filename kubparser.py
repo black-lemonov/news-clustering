@@ -49,6 +49,8 @@ async def k24_parser(
             descr = ' '.join([p.strip() for p in page_selector.css('div[itemprop="description"] > p::text').getall()])    
             
             results.append((url, title, descr, date))
+            
+            await asyncio.sleep(10)
         
         if log: log.info("Запарсено %d новостей с %s", len(results), site_url) 
     
@@ -102,6 +104,8 @@ async def kn_parser(
             descr = ' '.join([p.strip() for p in page_selector.css('div.material__content p::text').getall()])
             
             results.append((url, title, descr, date))
+            
+            await asyncio.sleep(10)
         
         if log: log.info("Запарсено %d новостей с %s", len(results), site_url) 
     
@@ -150,6 +154,8 @@ async def kt_parser(
             descr = ' '.join([p.strip() for p in page_selector.css('article > p::text').getall()])
             
             results.append((url, title, descr, date))
+            
+            await asyncio.sleep(10)
         
         if log: log.info("Запарсено %d новостей с %s", len(results), site_url) 
     
@@ -192,6 +198,8 @@ async def lk_parser(
             descr = ' '.join([p.strip() for p in page_selector.css('div.article-content > p::text').getall()])
             
             results.append((url, title, descr, date))
+            
+            await asyncio.sleep(10)
         
         if log: log.info("Запарсено %d новостей с %s", len(results), site_url) 
     
@@ -245,7 +253,7 @@ async def parse_many(
                             continue
                         if url not in parsed_urls:
                             db_cursor.execute(
-                                "insert into Articles values(?, ?, ?, ?)",
+                                "insert into Articles values(?, ?, ?, ?, -1)",
                                 (url, title, descr, date)
                             )
                             parsed_urls.append(url) 
@@ -300,7 +308,7 @@ async def parse_all(
                             continue
                         if url not in parsed_urls:
                             db_cursor.execute(
-                                "insert into Articles values(?, ?, ?, ?)",
+                                "insert into Articles values(?, ?, ?, ?, -1)",
                                 (url, title, descr, date)
                             )
                             parsed_urls.append(url) 
@@ -325,4 +333,4 @@ if __name__ == "__main__":
     except FileNotFoundError:
         print("ошибка при загрузке конфигурации логгера")
         
-    asyncio.run(parse_many(kt_parser, kn_parser, db_path="articles2.db", log=logger))
+    asyncio.run(parse_all(db_path="articles2.db", log=logger))

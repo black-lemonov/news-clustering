@@ -50,7 +50,7 @@ def clustering_db(db_path: str, log: Logger = None) -> None:
     max_df = 0.7
     min_df = 1
     # параметры кластеризации:
-    eps = 1.15
+    eps = 1.17
     min_samples = 1
     
     try:
@@ -59,7 +59,9 @@ def clustering_db(db_path: str, log: Logger = None) -> None:
             db_cursor.execute(
                 "select description from Articles;"
             )
-            if log: log.info("запрос к бд")
+            
+            if log: log.debug("загрузка запарсенных новостей")
+            
             descriptions = list(
                 map(itemgetter(0), db_cursor.fetchall())
             )
@@ -67,17 +69,20 @@ def clustering_db(db_path: str, log: Logger = None) -> None:
             vectorizer = StemmedTfidfVectorizer(max_df=max_df, min_df=min_df, decode_error="ignore")
             vectors = vectorizer.fit_transform(descriptions)
             
-            if log: log.info("векторизация; параметры: max_df = %f , min_df = %f", max_df, min_df)
+            if log: log.debug("векторизация")
     
             dbscan = DBSCAN(eps=eps, min_samples=min_samples)
             dbscan.fit(vectors)
             clust_labels = dbscan.labels_ 
             if log:
-                log.info("кластеризация; параметры: eps = %f , min_samples = %d ; получено %d кластеров", eps, min_samples, clust_labels)
+                log.info(
+                    "кластеризация: получено %d кластеров",
+                    len(set(clust_labels))
+                )
             
             db_cursor.executemany(
                 "update Articles set cluster_n = ? where description = ?",
-                [(clust_n, descr) for descr, clust_n in zip(descriptions, clust_labels)]
+                [(int(clust_n), descr) for descr, clust_n in zip(descriptions, clust_labels)]
             )
             
             if log: log.info("обновлено %d записей", len(db_cursor.fetchall()))

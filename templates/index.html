@@ -14,11 +14,13 @@
             <h1 class="main-header">{{title}}</h1>
         </header>
         <main>
-            {% for cluster in clusters %}
+            {% for _, _title, _date in headers %}
+                <p class="cluster-header_green"> {{_title}} <i>{{_date}}</i> </p>
                 <ul class="cluster_green">
-                {% for news in cluster %}
+                {% for _url, _title, _date in news[loop.index-1] %}
                     <li class="cluster__news_green">
-                    {{news[1]}} : <a class="src-link_green" href="{{news[0]}}">источник.</a>
+                        <a class="src-link_green" href="{{_url}}">{{_title}}</a>
+                        <i class="date_green">{{_date}}</i>
                     </li>
                 {% endfor %}
                 </ul>

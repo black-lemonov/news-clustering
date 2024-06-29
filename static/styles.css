@@ -1,6 +1,13 @@
 .main-header {
     font-family: Inter;
 }
+
+.cluster-header_green {
+    color: #040604;
+    font-family: Inter;
+    background-color: #92b4ac;
+}
+
 .cluster_green {
     border-radius: 5px;
     border-style: solid;
