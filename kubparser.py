@@ -20,7 +20,8 @@ import httpx
 
 async def k24_parser(
     httpx_client: httpx.AsyncClient,
-    logger: Logger) -> list[tuple[str, ...]]:
+    logger: Logger,
+    interval: int) -> list[tuple[str, ...]]:
     """
     Парсер для kuban24.tv
     """
@@ -49,7 +50,7 @@ async def k24_parser(
             
             results.append((url, title, descr, date))
             
-            # await asyncio.sleep(10)
+            await asyncio.sleep(interval)
         
         logger.info("Запарсено %d новостей с %s", len(results), site_url) 
     
@@ -66,7 +67,8 @@ async def k24_parser(
         
 async def kn_parser(
     httpx_client: httpx.AsyncClient,
-    logger: Logger) -> list[tuple[str, ...]]:
+    logger: Logger,
+    interval: int) -> list[tuple[str, ...]]:
     """
     Парсер kubnews.ru
     """
@@ -104,7 +106,7 @@ async def kn_parser(
             
             results.append((url, title, descr, date))
             
-            # await asyncio.sleep(10)
+            await asyncio.sleep(interval)
         
         logger.info("запарсено %d новостей с %s", len(results), site_url) 
     
@@ -119,7 +121,8 @@ async def kn_parser(
 
 async def kt_parser(
     httpx_client: httpx.AsyncClient,
-    logger: Logger) -> list[tuple[str, ...]]:
+    logger: Logger,
+    interval: int) -> list[tuple[str, ...]]:
     """
     Парсер для kubantoday.ru
     """
@@ -154,7 +157,7 @@ async def kt_parser(
             
             results.append((url, title, descr, date))
             
-            # await asyncio.sleep(10)
+            await asyncio.sleep(interval)
         
         logger.info("запарсено %d новостей с %s", len(results), site_url) 
     
@@ -169,7 +172,8 @@ async def kt_parser(
 
 async def lk_parser(
     httpx_client: httpx.AsyncClient,
-    logger: Logger) -> list[tuple[str, ...]]:
+    logger: Logger,
+    interval: int) -> list[tuple[str, ...]]:
     """
     Парсер livekuban.ru
     """
@@ -198,7 +202,8 @@ async def lk_parser(
             
             results.append((url, title, descr, date))
             
-            # await asyncio.sleep(10)
+            await asyncio.sleep(interval)
+
         
         logger.info("запарсено %d новостей с %s", len(results), site_url) 
     
@@ -212,16 +217,16 @@ async def lk_parser(
         
 
 async def parse_many(
-    *parsers: Callable[[httpx.AsyncClient, Logger | None], dict[str, tuple[str, ...]]],
+    *parsers: Callable[[httpx.AsyncClient, Logger, int], list[tuple[str, ...]]],
     db_path: str,
-    logger: Logger) -> None:
+    logger: Logger,
+    interval: int) -> None:
     """
     Запускает переданные парсеры и записывает результат их работы в БД
     """
     try:
         async with httpx.AsyncClient() as httpx_client:
             parsed_urls: list[str] = []
-            
             
             with sqlite3.connect(db_path) as db_con:
                 db_cursor = db_con.cursor()
@@ -233,7 +238,7 @@ async def parse_many(
             logger.debug("запуск парсеров")
             
             inter_res = await asyncio.gather(
-                *map(lambda f: f(httpx_client, logger), parsers)
+                *map(lambda f: f(httpx_client, logger, interval), parsers)
             )
             
             total_posts: int = sum(map(len, inter_res))
@@ -266,7 +271,8 @@ async def parse_many(
 
 async def parse_all(
     db_path: str,
-    logger: Logger) -> None:
+    logger: Logger,
+    interval: int) -> None:
     """
     Запускает все парсеры и записывает результат их работы в БД
     """
@@ -285,10 +291,10 @@ async def parse_all(
             logger.debug("запуск парсеров")
             
             inter_res = await asyncio.gather(
-                k24_parser(httpx_client, logger),
-                kn_parser(httpx_client, logger),
-                kt_parser(httpx_client, logger),
-                lk_parser(httpx_client, logger)
+                k24_parser(httpx_client, logger, interval ),
+                kn_parser( httpx_client,  logger, interval),
+                kt_parser( httpx_client,  logger, interval),
+                lk_parser( httpx_client,  logger, interval)
             )
             
             total_posts: int = sum(map(len, inter_res))

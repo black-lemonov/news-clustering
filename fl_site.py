@@ -4,11 +4,13 @@ Flask-приложение
 Функции для загрузки данных из бд sqlite и одна страница. 
 """
 
+from config import logger_config_path, db_path, parser_timeout, parsers_interval, cleaner_timeout
 from flask import Flask, render_template
-from multiprocessing import Process
 from logging import getLogger, Logger
 from clustering import clustering_db
+from multiprocessing import Process
 from kubparser import parse_all
+from functools import lru_cache
 from threading import Thread
 import logging.config
 import asyncio
@@ -18,31 +20,56 @@ import json
 
 
 app = Flask(__name__)
-    
-timeout: int = 3600 # сек
-
-days_limit: int = 2 # дней
-
-db_path = "articles copy 2.db"
 
 parser_timer: Thread = Thread(
     target=time.sleep,
-    args=(timeout,),
+    args=(parser_timeout,),
     daemon=True
 )
 
 cleaner_timer: Thread = Thread(
     target=time.sleep,
-    args=(days_limit * 24 * 3600,), 
+    args=(cleaner_timeout,), 
     daemon=True
 )
 
-
+@lru_cache(maxsize=1)
+def check_db(db_path: str, logger: Logger) -> None:
+    """
+    Проверяет есть ли в базе данных по переданному пути таблица Articles,\n
+    если нет создает в ней эту таблицу с полями: url, title, description, date, cluster_n\n
+    если не существует базы данных по переданному пути - raise sqlite3.OperationalError
+    """
+    try:
+        logger.debug("проверка наличия таблицы Articles: подключение к бд")
+        with sqlite3.connect(db_path) as db_con:
+            db_cursor = db_con.cursor()
+            logger.debug("проверка наличия таблицы Articles: выполнение запроса")
+            db_cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS "Articles" (
+                    "url"	TEXT,
+                    "title"	TEXT,
+                    "description"	TEXT,
+                    "date"	TEXT,
+                    "cluster_n"	INTEGER,
+                    PRIMARY KEY("url")
+                )
+                """
+            )
+            
+    except sqlite3.OperationalError as e:
+        logger.error("ошибка при проверке: %s", e)
+        raise sqlite3.OperationalError(e) 
+    
+    else: logger.debug("проверка выполнена успешно") 
+           
+            
+@lru_cache(maxsize=1)
 def get_logger(config_path: str) -> Logger:
     """
     Загружает логгер по конфиг файлу
     """
-    logger = None
     try:
         with open(config_path) as file:
             config = json.load(file)
@@ -51,9 +78,11 @@ def get_logger(config_path: str) -> Logger:
         logger = getLogger()
 
     except FileNotFoundError as e:
-        print("ошибка при загрузке конфигурации логгера ", e)
+        raise FileNotFoundError("ошибка при загрузке логгера: " + e.strerror)
 
-    finally: return logger
+    else:
+        print("загрузка логгера выполнена успешно")
+        return logger
 
 
 def run_cleaner(days_limit: int, logger: Logger) -> None:
@@ -132,24 +161,28 @@ def get_news_by_cluster(
 @app.route('/')
 def index():
     
-    logger = get_logger("logging.conf")
+    # загрузка логгера:
+    logger = get_logger(logger_config_path)
+    
+    # проверка наличия таблицы:
+    check_db(db_path, logger)
     
     if cleaner_timer.is_alive() == False:
         logger.debug("запускаю клинер")
         
-        run_cleaner(days_limit, logger)
+        run_cleaner(cleaner_timeout, logger)
         
         logger.debug("клинер завершил работу")
         
         cleaner_timer.start()
         
-        logger.debug("запускаю таймер для клинера; жду %d дней", days_limit)
+        logger.debug("запускаю таймер для клинера; жду %d сек.", cleaner_timeout)
     
     if parser_timer.is_alive() == False:
         
         logger.debug("запускаю парсер")
         
-        asyncio.run(parse_all(db_path, logger))
+        asyncio.run(parse_all(db_path, logger, parsers_interval))
         
         logger.debug("парсер завершил работу")
         
@@ -165,7 +198,7 @@ def index():
         
         logger.debug("процесс кластеризации завершен")
         
-        logger.debug("запускаю таймер для парсера; жду %d сек.", timeout)
+        logger.debug("запускаю таймер для парсера; жду %d сек.", parser_timeout)
         
         parser_timer.start()
     

@@ -15,7 +15,7 @@
         </header>
         <main>
             {% for _, _title, _date in headers %}
-                <p class="cluster-header_green"> {{_title}} <i>{{_date}}</i> </p>
+                <h3 class="cluster__header_green"> {{_title}} <i>{{_date}}</i> </h3>
                 <ul class="cluster_green">
                 {% for _url, _title, _date in news[loop.index-1] %}
                     <li class="cluster__news_green">

@@ -2,9 +2,13 @@
     font-family: Inter;
 }
 
-.cluster-header_green {
+.cluster__header_green {
+    padding: 5px;
     color: #040604;
     font-family: Inter;
+    border-radius: 5px;
+    border-style: solid;
+    border-color: #92b4ac;
     background-color: #92b4ac;
 }
 
@@ -13,6 +17,7 @@
     border-style: solid;
     border-color: #f4f7f4;
     background-color: #f4f7f4;
+    width: auto;
 }
 
 .cluster__news_green {
