@@ -1,5 +1,5 @@
 """
-Парсеры кубанских новостных сайтов
+Парсеры новостных сайтов
 
 Содержит асинхронные методы для парсинга таких сайтов, как: kuban24.tv, kubnews.ru, kubantoday.ru и livekuban.ru.
 Методы возвращают результат парсинга в виде словаря, содержащего ссылку на статью, её заголовок и полный текст.
@@ -54,15 +54,10 @@ async def k24_parser(
         
         logger.info("Запарсено %d новостей с %s", len(results), site_url) 
     
-    except httpx.NetworkError | httpx.InvalidURL | httpx.ConnectTimeout | httpx.HTTPStatusError as e:
-        logger.error("ошибка при парсинге %s: %s", site_url, e)
-    
-    except httpx.HTTPError | httpx.ConnectError as e:
+    except (httpx.HTTPError, httpx.InvalidURL) as e:
         logger.error("ошибка при парсинге %s: %s", site_url, e)
         
     finally: return results
-        
-    
         
         
 async def kn_parser(
@@ -110,10 +105,7 @@ async def kn_parser(
         
         logger.info("запарсено %d новостей с %s", len(results), site_url) 
     
-    except httpx.NetworkError | httpx.InvalidURL | httpx.ConnectTimeout | httpx.HTTPStatusError as e:
-        logger.error("ошибка при парсинге %s: %s", site_url, e)
-    
-    except httpx.HTTPError | httpx.ConnectError as e:
+    except (httpx.HTTPError, httpx.InvalidURL) as e:
         logger.error("ошибка при парсинге %s: %s", site_url, e)
         
     finally: return results
@@ -161,10 +153,7 @@ async def kt_parser(
         
         logger.info("запарсено %d новостей с %s", len(results), site_url) 
     
-    except httpx.NetworkError | httpx.InvalidURL | httpx.ConnectTimeout | httpx.HTTPStatusError as e:
-        logger.error("ошибка при парсинге %s: %s", site_url, e)
-    
-    except httpx.HTTPError | httpx.ConnectError as e:
+    except (httpx.HTTPError, httpx.InvalidURL) as e:
         logger.error("ошибка при парсинге %s: %s", site_url, e)
         
     finally: return results
@@ -204,13 +193,9 @@ async def lk_parser(
             
             await asyncio.sleep(interval)
 
-        
         logger.info("запарсено %d новостей с %s", len(results), site_url) 
     
-    except httpx.NetworkError | httpx.InvalidURL | httpx.ConnectTimeout | httpx.HTTPStatusError as e:
-        logger.error("ошибка при парсинге %s: %s", site_url, e)
-    
-    except httpx.HTTPError | httpx.ConnectError as e:
+    except (httpx.HTTPError, httpx.InvalidURL) as e:
         logger.error("ошибка при парсинге %s: %s", site_url, e)
         
     finally: return results
@@ -265,7 +250,7 @@ async def parse_many(
             
             logger.info("в бд добавлено %d новостей", new_posts)
     
-    except sqlite3.OperationalError as e:
+    except (sqlite3.OperationalError, sqlite3.Error) as e:
         logger.error("ошибка при добавлении записей: %s", e)
 
 
@@ -321,15 +306,15 @@ async def parse_all(
             
             logger.info("в бд добавлено %d новостей", new_posts)
     
-    except sqlite3.OperationalError as e:
+    except (sqlite3.OperationalError, sqlite3.Error) as e:
         logger.error("ошибка при добавлении записей: %s", e)
     
         
 if __name__ == "__main__":
-    
+
     logger = getLogger(__name__)
-    logging.basicConfig()
+    logging.basicConfig(level=logging.DEBUG)
     
-    db_path = input("введите путь к БД")
+    db_path = input("введите путь к БД: ")
         
-    asyncio.run(parse_all(db_path, logger))
+    asyncio.run(parse_all(db_path="articles.db", logger=logger, interval=1))

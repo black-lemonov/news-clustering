@@ -80,12 +80,9 @@ def clustering_db(db_path: str, logger: Logger) -> None:
             
             logger.info("обновлено %d записей", len(db_cursor.fetchall()))
                 
-    except sqlite3.OperationalError | sqlite3.InterfaceError | ValueError as e:
+    except (sqlite3.OperationalError, sqlite3.Error, ValueError) as e:
         logger.error("ошибка при кластеризации: %s", e)
-        
-    except ValueError as e:
-        logger.error("ошибка при кластеризации: %s", e)
-    
+
     
 if __name__ == "__main__":
     
@@ -95,5 +92,4 @@ if __name__ == "__main__":
     db_path = input("введите путь к БД")
     
     clustering_db(db_path, logger)
-    
     

@@ -58,9 +58,9 @@ def check_db(db_path: str, logger: Logger) -> None:
                 """
             )
             
-    except sqlite3.OperationalError as e:
+    except (sqlite3.OperationalError, sqlite3.Error) as e:
         logger.error("ошибка при проверке: %s", e)
-        raise sqlite3.OperationalError(e) 
+        raise sqlite3.Error(e) 
     
     else: logger.debug("проверка выполнена успешно") 
            
@@ -98,7 +98,7 @@ def run_cleaner(days_limit: int, logger: Logger) -> None:
             )
             logger.info("прошло %d дней: удалено %d записей", days_limit, len(db_cursor.fetchall()))
     
-    except sqlite3.OperationalError as e:
+    except (sqlite3.OperationalError, sqlite3.Error) as e:
         logger.error("ошибка при удалении записей: %s", e)
         
 
@@ -123,7 +123,7 @@ def get_clusters_headers(
 
             logger.info("извлечено %d заголовков кластеров", len(headers))
     
-    except sqlite3.OperationalError as e:
+    except (sqlite3.OperationalError, sqlite3.Error) as e:
         logger.error("ошибка при загрузке записей: %s", e)
         
     finally: return headers
@@ -152,7 +152,7 @@ def get_news_by_cluster(
             
             news = [(url, title, format(date)) for url, title, date in cursor.fetchall()] 
     
-    except sqlite3.OperationalError as e:
+    except (sqlite3.OperationalError, sqlite3.Error) as e:
         logger.error("ошибка при загрузке записей: %s", e)
         
     finally: return news
