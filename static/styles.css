@@ -21,11 +21,12 @@
 }
 
 .src-link_green {
-    color: #92b4ac;
-    font-style: italic;
+    color: #040604;
+    text-decoration: none;
 }
 
 .src-link_green:visited, .src-link_green:hover {
     color: #6d996c;
+    text-decoration: underline;
 }
 

@@ -91,7 +91,7 @@ def get_clusters_headers(
                 """
             )
             headers = cursor.fetchall()
-            print(headers)
+
             logger.info("извлечено %d заголовков кластеров", len(headers))
     
     except sqlite3.OperationalError as e:
@@ -180,7 +180,8 @@ def index():
     logger.debug("извлекаю новости по кластерам")
     
     clusters_news: list[list[tuple[str, ...]]] = [
-        get_news_by_cluster(db_path, clust_n, logger) for clust_n, _, _ in clusters_headers
+        get_news_by_cluster(db_path, clust_n, logger)
+        for clust_n, _, _ in clusters_headers
     ]
         
     logger.debug("новости по кластерам извлечены")

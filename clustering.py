@@ -12,21 +12,10 @@ from typing import Callable, Any
 from string import punctuation
 from operator import itemgetter
 from functools import partial
-from logging import Logger, getLogger
+from logging import Logger
 import logging.config
 import sqlite3
-import scipy as sp
-import numpy as np
-import json
 
-# когда удалять кластеры?
-
-# с какими промежутком парсить новости?
-
-# чтобы это определить надо выполнить парсинг
-# всех сайтов и проанализировать полученные данные
-
-# а пока реализация самого алгоритма:
 
 class StemmedTfidfVectorizer(TfidfVectorizer):
     """
@@ -42,7 +31,7 @@ class StemmedTfidfVectorizer(TfidfVectorizer):
         )
 
 
-def clustering_db(db_path: str, log: Logger = None) -> None:
+def clustering_db(db_path: str, logger: Logger) -> None:
     """
     Добавляет номера кластеров к записям таблицы Articles
     """
@@ -56,43 +45,46 @@ def clustering_db(db_path: str, log: Logger = None) -> None:
     try:
         with sqlite3.connect(db_path) as db_con:
             db_cursor = db_con.cursor()
-            db_cursor.execute(
-                "select description from Articles;"
-            )
             
-            if log: log.debug("загрузка запарсенных новостей")
+            logger.debug("загрузка новостей для векторизации")
+            
+            db_cursor.execute("SELECT description FROM Articles")
+            
+            logger.debug("новости загружены")
             
             descriptions = list(
                 map(itemgetter(0), db_cursor.fetchall())
             )
             
+            logger.debug("векторизация новостей")
+            
             vectorizer = StemmedTfidfVectorizer(max_df=max_df, min_df=min_df, decode_error="ignore")
             vectors = vectorizer.fit_transform(descriptions)
             
-            if log: log.debug("векторизация")
+            logger.debug("векторизация завершена")
+            
+            logger.debug("кластеризация новостей")
     
             dbscan = DBSCAN(eps=eps, min_samples=min_samples)
             dbscan.fit(vectors)
             clust_labels = dbscan.labels_ 
-            if log:
-                log.info(
-                    "кластеризация: получено %d кластеров",
-                    len(set(clust_labels))
-                )
+            
+            logger.info("получено %d кластеров", len(set(clust_labels)))
+            
+            logger.debug("обновление записей бд")
             
             db_cursor.executemany(
                 "update Articles set cluster_n = ? where description = ?",
                 [(int(clust_n), descr) for descr, clust_n in zip(descriptions, clust_labels)]
             )
             
-            if log: log.info("обновлено %d записей", len(db_cursor.fetchall()))
+            logger.info("обновлено %d записей", len(db_cursor.fetchall()))
                 
-    except sqlite3.OperationalError as e:
-        if log: log.error("ошибка при кластеризации: %s", e)
-    except sqlite3.InterfaceError as e:
-        if log: log.error("ошибка при кластеризации: %s", e)
+    except sqlite3.OperationalError | sqlite3.InterfaceError | ValueError as e:
+        logger.error("ошибка при кластеризации: %s", e)
+        
     except ValueError as e:
-        if log: log.error("ошибка при кластеризации: %s", e)
+        logger.error("ошибка при кластеризации: %s", e)
     
     
 if __name__ == "__main__":
@@ -100,6 +92,8 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     logging.basicConfig()
     
-    # insert_clusters("articles2.db", log=logger)
+    db_path = input("введите путь к БД")
+    
+    clustering_db(db_path, logger)
     
     

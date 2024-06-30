@@ -16,12 +16,11 @@ import logging.config
 import sqlite3
 import asyncio
 import httpx
-import json
 
 
 async def k24_parser(
     httpx_client: httpx.AsyncClient,
-    log: Logger = None) -> list[tuple[str, ...]]:
+    logger: Logger) -> list[tuple[str, ...]]:
     """
     Парсер для kuban24.tv
     """
@@ -30,6 +29,8 @@ async def k24_parser(
     results: list[tuple[str, ...]] = []
     
     try:
+        logger.debug("отправляю запрос к %s", site_url)
+        
         response = await httpx_client.get(site_url)
     
         selector = Selector(text=response.raise_for_status().text)
@@ -39,9 +40,7 @@ async def k24_parser(
             url = article.css('a.news-card-title::attr(href)').get().strip()
             
             date = article.css("div.news-card-head div.news-card-date::text").get().strip()
-            date = date.split(' ')[0].split('.')
-            date.reverse()
-            date = '-'.join(date)
+            date = '-'.join(date.split(' ')[0].split('.')[::-1])
             
             page = await httpx_client.get(url)
             page_selector = Selector(text=page.text)
@@ -50,15 +49,15 @@ async def k24_parser(
             
             results.append((url, title, descr, date))
             
-            await asyncio.sleep(10)
+            # await asyncio.sleep(10)
         
-        if log: log.info("Запарсено %d новостей с %s", len(results), site_url) 
+        logger.info("Запарсено %d новостей с %s", len(results), site_url) 
     
     except httpx.NetworkError | httpx.InvalidURL | httpx.ConnectTimeout | httpx.HTTPStatusError as e:
-        if log: log.error("ошибка при парсинге %s: %s", site_url, e)
+        logger.error("ошибка при парсинге %s: %s", site_url, e)
     
     except httpx.HTTPError | httpx.ConnectError as e:
-        if log: log.error("ошибка при парсинге %s: %s", site_url, e)
+        logger.error("ошибка при парсинге %s: %s", site_url, e)
         
     finally: return results
         
@@ -67,7 +66,7 @@ async def k24_parser(
         
 async def kn_parser(
     httpx_client: httpx.AsyncClient,
-    log: Logger = None) -> list[tuple[str, ...]]:
+    logger: Logger) -> list[tuple[str, ...]]:
     """
     Парсер kubnews.ru
     """
@@ -76,6 +75,8 @@ async def kn_parser(
     results: list[tuple[str, ...]] = []
     
     try:
+        logger.debug("отправляю запрос к %s", site_url)
+        
         response = await httpx_client.get(site_url)
         
         selector = Selector(text=response.raise_for_status().text)    
@@ -94,9 +95,7 @@ async def kn_parser(
             elif "вчера" in date:
                 date = (datetime.datetime.today() - timedelta(days=1)).isoformat()
             else:
-                date = date.split(' ')[0].split('.')
-                date.reverse()
-                date = '-'.join(date)
+                date = '-'.join(date.split(' ')[0].split('.')[::-1])
             
             page = await httpx_client.get(url)
             page_selector = Selector(text=page.text)
@@ -105,22 +104,22 @@ async def kn_parser(
             
             results.append((url, title, descr, date))
             
-            await asyncio.sleep(10)
+            # await asyncio.sleep(10)
         
-        if log: log.info("Запарсено %d новостей с %s", len(results), site_url) 
+        logger.info("запарсено %d новостей с %s", len(results), site_url) 
     
     except httpx.NetworkError | httpx.InvalidURL | httpx.ConnectTimeout | httpx.HTTPStatusError as e:
-        if log: log.error("ошибка при парсинге %s: %s", site_url, e)
+        logger.error("ошибка при парсинге %s: %s", site_url, e)
     
     except httpx.HTTPError | httpx.ConnectError as e:
-        if log: log.error("ошибка при парсинге %s: %s", site_url, e)
+        logger.error("ошибка при парсинге %s: %s", site_url, e)
         
     finally: return results
             
 
 async def kt_parser(
     httpx_client: httpx.AsyncClient,
-    log: Logger = None) -> list[tuple[str, ...]]:
+    logger: Logger) -> list[tuple[str, ...]]:
     """
     Парсер для kubantoday.ru
     """
@@ -129,6 +128,8 @@ async def kt_parser(
     results: list[tuple[str, ...]] = []
     
     try:
+        logger.debug("отправляю запрос к %s", site_url)
+        
         response = await httpx_client.get(site_url)
         
         selector = Selector(text=response.raise_for_status().text)  
@@ -144,9 +145,7 @@ async def kt_parser(
             elif "Вчера" in date:
                 date = (datetime.datetime.today() - timedelta(days=1)).isoformat()
             else:
-                date = date.split(' ')[1].split('.')
-                date.reverse()
-                date = '-'.join(date)
+                date = '-'.join(date.split(' ')[1].split('.')[::-1])
                             
             page = await httpx_client.get(url)
             page_selector = Selector(text=page.text)
@@ -155,30 +154,32 @@ async def kt_parser(
             
             results.append((url, title, descr, date))
             
-            await asyncio.sleep(10)
+            # await asyncio.sleep(10)
         
-        if log: log.info("Запарсено %d новостей с %s", len(results), site_url) 
+        logger.info("запарсено %d новостей с %s", len(results), site_url) 
     
     except httpx.NetworkError | httpx.InvalidURL | httpx.ConnectTimeout | httpx.HTTPStatusError as e:
-        if log: log.error("ошибка при парсинге %s: %s", site_url, e)
+        logger.error("ошибка при парсинге %s: %s", site_url, e)
     
     except httpx.HTTPError | httpx.ConnectError as e:
-        if log: log.error("ошибка при парсинге %s: %s", site_url, e)
+        logger.error("ошибка при парсинге %s: %s", site_url, e)
         
     finally: return results
         
 
 async def lk_parser(
     httpx_client: httpx.AsyncClient,
-    log: Logger = None) -> list[tuple[str, ...]]:
+    logger: Logger) -> list[tuple[str, ...]]:
     """
     Парсер livekuban.ru
     """
     site_url = "https://www.livekuban.ru/news"
     
-    results = {}
+    results: list[tuple[str, ...]] = []
     
-    try: 
+    try:
+        logger.debug("отправляю запрос к %s", site_url)
+        
         response = await httpx_client.get(site_url)
         
         selector = Selector(text=response.raise_for_status().text)
@@ -188,9 +189,7 @@ async def lk_parser(
             url = article.css('div.node--description a::attr(href)').get().strip()
             
             date = article.css("div.date::text").get().strip()
-            date = date.split(' ')[0].split('.')
-            date.reverse()
-            date = '-'.join(date)
+            date = '-'.join(date.split(' ')[0].split('.')[::-1])
         
             page = await httpx_client.get(url)
             page_selector = Selector(text=page.text)
@@ -199,15 +198,15 @@ async def lk_parser(
             
             results.append((url, title, descr, date))
             
-            await asyncio.sleep(10)
+            # await asyncio.sleep(10)
         
-        if log: log.info("Запарсено %d новостей с %s", len(results), site_url) 
+        logger.info("запарсено %d новостей с %s", len(results), site_url) 
     
     except httpx.NetworkError | httpx.InvalidURL | httpx.ConnectTimeout | httpx.HTTPStatusError as e:
-        if log: log.error("ошибка при парсинге %s: %s", site_url, e)
+        logger.error("ошибка при парсинге %s: %s", site_url, e)
     
     except httpx.HTTPError | httpx.ConnectError as e:
-        if log: log.error("ошибка при парсинге %s: %s", site_url, e)
+        logger.error("ошибка при парсинге %s: %s", site_url, e)
         
     finally: return results
         
@@ -215,7 +214,7 @@ async def lk_parser(
 async def parse_many(
     *parsers: Callable[[httpx.AsyncClient, Logger | None], dict[str, tuple[str, ...]]],
     db_path: str,
-    log: Logger = None) -> None:
+    logger: Logger) -> None:
     """
     Запускает переданные парсеры и записывает результат их работы в БД
     """
@@ -226,19 +225,19 @@ async def parse_many(
             
             with sqlite3.connect(db_path) as db_con:
                 db_cursor = db_con.cursor()
-                db_cursor.execute("select url from Articles")
+                db_cursor.execute("SELECT url FROM Articles")
                 parsed_urls = list(
                     map(itemgetter(0), db_cursor.fetchall())
                 )
 
-            if log: log.debug("запуск парсеров")
+            logger.debug("запуск парсеров")
             
             inter_res = await asyncio.gather(
-                *map(lambda f: f(httpx_client, log), parsers)
+                *map(lambda f: f(httpx_client, logger), parsers)
             )
             
             total_posts: int = sum(map(len, inter_res))
-            if log: log.info("запарсено всего %d новостей", total_posts) 
+            logger.info("запарсено всего %d новостей", total_posts) 
             
             stopwords: set[str] = set(["ТОП"])
             
@@ -253,21 +252,21 @@ async def parse_many(
                             continue
                         if url not in parsed_urls:
                             db_cursor.execute(
-                                "insert into Articles values(?, ?, ?, ?, -1)",
+                                "INSERT INTO Articles VALUES(?, ?, ?, ?, -1)",
                                 (url, title, descr, date)
                             )
                             parsed_urls.append(url) 
                             new_posts += 1
             
-            if log: log.info("в бд добавлено %d новостей", new_posts)
+            logger.info("в бд добавлено %d новостей", new_posts)
     
     except sqlite3.OperationalError as e:
-        if log: log.error("ошибка при добавлении записей: %s", e)
+        logger.error("ошибка при добавлении записей: %s", e)
 
 
 async def parse_all(
     db_path: str,
-    log: Logger = None) -> None:
+    logger: Logger) -> None:
     """
     Запускает все парсеры и записывает результат их работы в БД
     """
@@ -278,22 +277,22 @@ async def parse_all(
             
             with sqlite3.connect(db_path) as db_con:
                 db_cursor = db_con.cursor()
-                db_cursor.execute("select url from Articles")
+                db_cursor.execute("SELECT url FROM Articles")
                 parsed_urls = list(
                     map(itemgetter(0), db_cursor.fetchall())
                 )
 
-            if log: log.debug("запуск парсеров")
+            logger.debug("запуск парсеров")
             
             inter_res = await asyncio.gather(
-                k24_parser(httpx_client, log),
-                kn_parser(httpx_client, log),
-                kt_parser(httpx_client, log),
-                lk_parser(httpx_client, log)
+                k24_parser(httpx_client, logger),
+                kn_parser(httpx_client, logger),
+                kt_parser(httpx_client, logger),
+                lk_parser(httpx_client, logger)
             )
             
             total_posts: int = sum(map(len, inter_res))
-            if log: log.info("запарсено всего %d новостей", total_posts) 
+            logger.info("запарсено всего %d новостей", total_posts) 
             
             stopwords: set[str] = set(["ТОП"])
             
@@ -308,29 +307,23 @@ async def parse_all(
                             continue
                         if url not in parsed_urls:
                             db_cursor.execute(
-                                "insert into Articles values(?, ?, ?, ?, -1)",
+                                "INSERT INTO Articles VALUES(?, ?, ?, ?, -1)",
                                 (url, title, descr, date)
                             )
                             parsed_urls.append(url) 
                             new_posts += 1
             
-            if log: log.info("в бд добавлено %d новостей", new_posts)
+            logger.info("в бд добавлено %d новостей", new_posts)
     
     except sqlite3.OperationalError as e:
-        if log: log.error("ошибка при добавлении записей: %s", e)
+        logger.error("ошибка при добавлении записей: %s", e)
     
         
 if __name__ == "__main__":
     
-    logger = None
-    try:
-        with open("logging.conf") as file:
-            config = json.load(file)
+    logger = getLogger(__name__)
+    logging.basicConfig()
+    
+    db_path = input("введите путь к БД")
         
-        logging.config.dictConfig(config)
-        logger = getLogger()
-
-    except FileNotFoundError:
-        print("ошибка при загрузке конфигурации логгера")
-        
-    asyncio.run(parse_all(db_path="articles2.db", log=logger))
+    asyncio.run(parse_all(db_path, logger))
