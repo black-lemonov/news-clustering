@@ -1,5 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
+from collections import deque
 from datetime import datetime, timedelta
 
 import httpx
@@ -13,11 +14,16 @@ class Parser(ABC):
     site_url: str
 
     _repositories: list[NewsRepository]
-    _parsed_news: News
     _logger: Logger
     _http_client: httpx.AsyncClient
+
     _parse_interval_sec: int
+    _parsed_urls_buffer_limit: int = 30
+    _parsed_urls_buffer: deque[str]   # здесь будет очередь из разных новостей
+    _tmp_urls_buffer: deque[str]    # здесь будут все новости с одной страницы
+
     _article: Selector
+    _parsed_news: News
 
     _article_css: str
     _title_css: str
@@ -36,6 +42,7 @@ class Parser(ABC):
         self._logger = logger
         self._http_client = http_client
         self._parse_interval_sec = parse_interval
+        self._parsed_urls_buffer = deque(maxlen=self._parsed_urls_buffer_limit)
 
     def add_storage(self, storage: NewsRepository) -> None:
         self._repositories.append(storage)
@@ -47,12 +54,17 @@ class Parser(ABC):
         await self._try_get_main_page()
         for article in self._get_articles():
             self._article = article
-            self._parse_title()
+            self._create_blank_news()
             self._parse_url()
+            if self._in_parsed_urls():
+                continue
+            self._save_to_tmp_buffer()
+            self._parse_title()
             self._parse_date()
             await self._sleep()
             await self._parse_content()
             self._save_to_storage()
+            self._save_to_urls_buffer()
 
     async def _try_get_main_page(self) -> None:
         self._main_page: str = ""
@@ -69,13 +81,24 @@ class Parser(ABC):
         selector = Selector(text=self._main_page)
         return selector.css(self._article_css)
 
-    def _parse_title(self) -> None:
-        self._parsed_news = News(
-            title=self._article.css(self._title_css).get().strip()
-        )
+    def _create_blank_news(self) -> None:
+        self._parsed_news = News()
 
     def _parse_url(self) -> None:
-        self._parsed_news.url = self._article.css(self._url_css).get().strip()
+        url = self._article.css(self._url_css).get().strip()
+        self._parsed_news.url = url
+
+    def _in_parsed_urls(self) -> bool:
+        url = self._parsed_news.url
+        return url in self._parsed_urls_buffer
+
+    def _save_to_tmp_buffer(self) -> None:
+        url = self._parsed_news.url
+        self._tmp_urls_buffer.appendleft(url)
+
+    def _parse_title(self) -> None:
+        title = self._article.css(self._title_css).get().strip()
+        self._parsed_news.title = title
 
     def _parse_date(self) -> None:
         date = self._article.css(self._date_css).get().strip()
@@ -107,6 +130,10 @@ class Parser(ABC):
         for storage in self._repositories:
             storage.save_news(self._parsed_news)
             self._logger.info(f"Сохранено в {repr(storage)}")
+
+    def _save_to_urls_buffer(self) -> None:
+        self._parsed_urls_buffer.extend(self._tmp_urls_buffer)
+        self._tmp_urls_buffer.clear()
 
     async def _sleep(self) -> None:
         self._logger.info(f"Жду {self._parse_interval_sec} сек...")
