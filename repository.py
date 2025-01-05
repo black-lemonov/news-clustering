@@ -5,17 +5,15 @@ from operator import itemgetter
 
 from typing import final
 
-from lxml.xsltext import self_node
-
-from main import logger
+from logger import Logger
 
 
 @dataclass
 class News:
-    title: str = ""
-    url: str = ""
-    date: str = ""
-    content: str = ""
+    title: str = None
+    url: str = None
+    date: str = None
+    content: str = None
     cluster_n: int = None
 
 
@@ -29,7 +27,7 @@ class NewsRepository(ABC):
         ...
 
     @abstractmethod
-    def get_news_by_clusters(self, cluster_n: int) -> list[News]:
+    def get_news_by_cluster(self, cluster_n: int) -> list[News]:
         ...
 
     @abstractmethod
@@ -42,7 +40,7 @@ class FileRepository(NewsRepository):
     def get_clusters_headers(self) -> list[News]:
         pass
 
-    def get_news_by_clusters(self, cluster_n: int) -> list[News]:
+    def get_news_by_cluster(self, cluster_n: int) -> list[News]:
         pass
 
     path: str = "./resources/news.txt"
@@ -61,74 +59,71 @@ class FileRepository(NewsRepository):
 
 @final
 class SQLiteRepository(NewsRepository):
-    db_path: str = "./resources/articles.db"   # лучше news.db
-    _con: sqlite3.Connection
+    _db_path: str
+    _logger: Logger
 
-    def __init__(self) -> None:
-        self._con = sqlite3.connect(self.db_path)
-        cursor = self._con.cursor()
-        cursor.execute("SELECT url FROM Articles")
-        self._parsed_urls = list(
-            map(itemgetter(0), cursor.fetchall())
-        )
+    def __init__(self, db_path: str, logger: Logger) -> None:
+        self._db_path = db_path
+        self._logger = logger
 
     def save_news(self, news: News) -> None:
         title = news.title
         url = news.url
         date = news.date
         content = news.content
-        cursor = self._con.cursor()
-        cursor.execute(
-            "INSERT INTO Articles VALUES(?, ?, ?, ?, -1)",
-            (url, title, content, date)
-        )
-        self._con.commit()
+        with sqlite3.Connection(self._db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO Articles VALUES(?, ?, ?, ?, -1)",
+                (url, title, content, date)
+            )
 
     def delete_old(self, days: int) -> None:
         try:
-            cursor = self._con.cursor()
-            cursor.execute(
-                f"DELETE FROM Articles WHERE julianday(date) - julianday(date('now')) > ?",
-                (days,)
-            )
-            self._con.commit()
-
+            with sqlite3.Connection(self._db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"DELETE FROM Articles WHERE julianday(date) - julianday(date('now')) > ?",
+                    (days,)
+                )
         except (sqlite3.OperationalError, sqlite3.Error) as e:
-            logger.error(f"Ошибка при удалении записей: {e}")
+            self._logger.error(f"Ошибка при удалении записей: {e}")
 
     def get_clusters_headers(self) -> list[News]:
         try:
-            cursor = self._con.cursor()
-            cursor.execute(
-                """
-                SELECT cluster_n, title, min(date)
-                FROM Articles
-                GROUP BY cluster_n
-                """
-            )
-            return [
-                News(title=title, date=date, cluster_n=cluster_n)
-                for cluster_n, title, date in cursor.fetchall()
-            ]
+            with sqlite3.Connection(self._db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT cluster_n, title, min(date)
+                    FROM Articles
+                    GROUP BY cluster_n
+                    """
+                )
+                return [
+                    News(title=title, date=date, cluster_n=cluster_n)
+                    for cluster_n, title, date in cursor.fetchall()
+                ]
         except (sqlite3.OperationalError, sqlite3.Error) as e:
-            logger.error(f"Ошибка при загрузке записей: {e}")
+            self._logger.error(f"Ошибка при загрузке записей: {e}")
 
-    def get_news_by_clusters(self, cluster_n: int) -> list[News]:
+    def get_news_by_cluster(self, cluster_n: int) -> list[News]:
         try:
-            cursor = self._con.cursor()
-            cursor.execute(
-                """
-                SELECT url, title, date FROM Articles
-                WHERE cluster_n = ?
-                """,
-                (cluster_n,)
-            )
-            return [
-                News(url=url, title=title, date=self.__format_date(date))
-                for url, title, date in cursor.fetchall()
-            ]
+            with sqlite3.Connection(self._db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT url, title, date FROM Articles
+                    WHERE cluster_n = ?
+                    """,
+                    (cluster_n,)
+                )
+                return [
+                    News(url=url, title=title, date=self.__format_date(date))
+                    for url, title, date in cursor.fetchall()
+                ]
         except (sqlite3.OperationalError, sqlite3.Error) as e:
-            logger.error(f"Ошибка при загрузке записей: {e}")
+            self._logger.error(f"Ошибка при загрузке записей: {e}")
 
     @staticmethod
     def __format_date(date_str: str) -> str:
