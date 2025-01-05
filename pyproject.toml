@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "news-clustering"
+version = "0.1.0"
+description = ""
+authors = ["black-lemonov <egor.porf1@mail.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+nltk = "^3.9.1"
+scikit-learn = "^1.6.0"
+flask = "^3.1.0"
+scrapy = "^2.12.0"
+httpx = "^0.28.1"
+pytest = "^8.3.4"
+pytest-asyncio = "^0.25.0"
+icecream = "^2.1.3"
+python-dotenv = "^1.0.1"
+apscheduler = "^3.11.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
