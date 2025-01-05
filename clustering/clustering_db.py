@@ -12,8 +12,6 @@ from typing import Callable, Any
 from string import punctuation
 from operator import itemgetter
 from functools import partial
-from logging import Logger
-import logging.config
 import sqlite3
 
 
@@ -31,65 +29,41 @@ class StemmedTfidfVectorizer(TfidfVectorizer):
         )
 
 
-def clustering_db(db_path: str, logger: Logger) -> None:
-    """
-    Добавляет номера кластеров к записям таблицы Articles
-    """
+class ClusteringDB:
+    __db_path: str
+
     # параметры векторизации:
-    max_df = 0.7
-    min_df = 1
+    __max_df = 0.7
+    __min_df = 1
     # параметры кластеризации:
-    eps = 1.17
-    min_samples = 1
-    
-    try:
-        with sqlite3.connect(db_path) as db_con:
+    __eps = 1.17
+    __min_samples = 1
+
+    def __init__(self, db_path: str) -> None:
+        self.__db_path = db_path
+
+    def run(self):
+        with sqlite3.connect(self.__db_path) as db_con:
             db_cursor = db_con.cursor()
-            
-            logger.debug("загрузка новостей для векторизации")
-            
             db_cursor.execute("SELECT description FROM Articles")
-            
-            logger.debug("новости загружены")
-            
             descriptions = list(
                 map(itemgetter(0), db_cursor.fetchall())
             )
-            
-            logger.debug("векторизация новостей")
-            
-            vectorizer = StemmedTfidfVectorizer(max_df=max_df, min_df=min_df, decode_error="ignore")
-            vectors = vectorizer.fit_transform(descriptions)
-            
-            logger.debug("векторизация завершена")
-            
-            logger.debug("кластеризация новостей")
-    
-            dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-            dbscan.fit(vectors)
-            clust_labels = dbscan.labels_ 
-            
-            logger.info("получено %d кластеров", len(set(clust_labels)))
-            
-            logger.debug("обновление записей бд")
-            
+            vectors = self.__make_vectors(descriptions)
+            clusters_labels = self.__make_clusters(vectors)
             db_cursor.executemany(
                 "update Articles set cluster_n = ? where description = ?",
-                [(int(clust_n), descr) for descr, clust_n in zip(descriptions, clust_labels)]
+                [(int(clust_n), descr) for descr, clust_n in zip(descriptions, clusters_labels)]
             )
-            
-            logger.info("обновлено %d записей", len(db_cursor.fetchall()))
-                
-    except (sqlite3.OperationalError, sqlite3.Error, ValueError) as e:
-        logger.error("ошибка при кластеризации: %s", e)
 
-    
-if __name__ == "__main__":
-    
-    logger = logging.getLogger(__name__)
-    logging.basicConfig()
-    
-    db_path = input("введите путь к БД")
-    
-    clustering_db(db_path, logger)
-    
+    def __make_vectors(self, descriptions):
+        vectorizer = StemmedTfidfVectorizer(max_df=self.__max_df, min_df=self.__min_df, decode_error="ignore")
+        return vectorizer.fit_transform(descriptions)
+
+    def __make_clusters(self, vectors):
+        """
+        Добавляет номера кластеров к записям таблицы Articles
+        """
+        dbscan = DBSCAN(eps=self.__eps, min_samples=self.__min_samples)
+        dbscan.fit(vectors)
+        return dbscan.labels_
