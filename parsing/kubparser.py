@@ -31,7 +31,6 @@ async def k24_parser(
     
     try:
         logger.debug("отправляю запрос к %s", site_url)
-        
         response = await httpx_client.get(site_url)
     
         selector = Selector(text=response.raise_for_status().text)
