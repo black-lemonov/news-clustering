@@ -1,36 +1,30 @@
 import asyncio
-from abc import ABC, abstractmethod
+import datetime
 from collections import deque
 
+import dateparser
 import httpx
 from icecream import ic
 from scrapy import Selector
 
 from controllers.parser_controller import ParserController
 from dto.article import Article
+from dto.article_selectors import ArticleSelectors
 
 
-class BaseSpider(ABC):
+class BaseParser:
     site_url: str
+    _selectors: ArticleSelectors
+    _stopwords: set[str] = {"ТОП-5", "Топ", "топ"}
 
     _controller: ParserController
     _http_client: httpx.AsyncClient
 
+    _article: Selector
     _parse_interval_sec: int
     _parsed_urls_buffer_limit: int = 30
     _parsed_urls_buffer: deque[str]  # здесь будет очередь из разных новостей
     _tmp_urls_buffer: deque[str]  # здесь будут все новости с одной страницы
-
-    _stopwords: set[str] = {"ТОП", "Топ", "топ"}
-
-    _article: Selector
-    _parsed_article: Article
-
-    _article_css: str
-    _title_css: str
-    _url_css: str
-    _date_css: str
-    _content_css: str
 
     def __init__(
             self,
@@ -44,11 +38,14 @@ class BaseSpider(ABC):
         self._parsed_urls_buffer = deque(maxlen=self._parsed_urls_buffer_limit)
         self._tmp_urls_buffer = deque()
 
+    @staticmethod
+    def _format_date(date: str) -> datetime.datetime:
+        return dateparser.parse(date, languages=["ru"], settings={'DATE_ORDER': 'DMY'})
+
     async def parse(self) -> None:
         ic(f"Отправляю запрос {self.site_url}")
         await self._try_get_main_page()
         for article in self._get_articles():
-            ic(article)
             self._article = article
             self._create_blank_article()
             self._parse_url()
@@ -77,13 +74,13 @@ class BaseSpider(ABC):
 
     def _get_articles(self):
         selector = Selector(text=self._main_page)
-        return selector.css(self._article_css)
+        return selector.css(self._selectors.article)
 
     def _create_blank_article(self) -> None:
         self._parsed_article = Article()
 
     def _parse_url(self) -> None:
-        url = self._article.css(self._url_css).get().strip()
+        url = self._article.css(self._selectors.url).get().strip()
         self._parsed_article.url = url
 
     def _in_parsed_urls(self) -> bool:
@@ -95,7 +92,7 @@ class BaseSpider(ABC):
         self._tmp_urls_buffer.appendleft(url)
 
     def _parse_title(self) -> None:
-        title = self._article.css(self._title_css).get().strip()
+        title = self._article.css(self._selectors.title).get().strip()
         self._parsed_article.title = title
 
     def _is_spam(self) -> bool:
@@ -103,13 +100,8 @@ class BaseSpider(ABC):
         return title in self._stopwords
 
     def _parse_date(self) -> None:
-        date = self._article.css(self._date_css).get().strip()
+        date = self._article.css(self._selectors.date).get().strip()
         self._parsed_article.date = self._format_date(date)
-
-    @staticmethod
-    @abstractmethod
-    def _format_date(date: str) -> str:
-        ...
 
     async def _parse_content(self) -> None:
         await self.__try_get_article()
@@ -121,7 +113,7 @@ class BaseSpider(ABC):
             selector = Selector(text=article.text)
             content = ' '.join(
                 [
-                    p.strip() for p in selector.css(self._content_css).getall()
+                    p.strip() for p in selector.css(self._selectors.content).getall()
                 ]
             )
             self._parsed_article.description = content
@@ -136,4 +128,5 @@ class BaseSpider(ABC):
         self._tmp_urls_buffer.clear()
 
     async def _sleep(self) -> None:
+        ic(f"Жду {self._parse_interval_sec} сек...")
         await asyncio.sleep(self._parse_interval_sec)
