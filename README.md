@@ -9,5 +9,5 @@ poetry install
 
 Необходимо запустить файл fl_site.py:
 ```shell
-python3 fl_site.py
+python3 app.py
 ```
