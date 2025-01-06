@@ -29,7 +29,7 @@ class SQLiteDBContext(DBContext):
     def delete_where_days_limit(self, days_limit: int) -> None:
         with sqlite3.Connection(self.__db_path) as con:
             con.execute(
-                "DELETE FROM Articles WHERE julianday(date) - julianday(date('now')) > ?",
+                "DELETE FROM Articles WHERE julianday(date('now')) - julianday(date) > ?",
                 (days_limit,)
             )
 
@@ -37,7 +37,7 @@ class SQLiteDBContext(DBContext):
         with sqlite3.Connection(self.__db_path) as con:
             con.row_factory = self.__article_factory
             return con.execute(
-                "SELECT cluster_n, title, min(date) FROM Articles GROUP BY cluster_n"
+                "SELECT cluster_n, title, min(date) as date FROM Articles GROUP BY cluster_n"
             ).fetchall()
 
     def select_by_cluster(self, cluster_n: int) -> list[Article]:

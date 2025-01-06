@@ -5,10 +5,11 @@ from db_context.sqlite_context import DBContext
 
 class CleanerController:
     __db_context: DBContext
-    __days_limit: int = 30
+    __days_limit: int
 
-    def __init__(self, db_context: DBContext):
+    def __init__(self, db_context: DBContext, days_limit: int):
         self.__db_context = db_context
+        self.__days_limit = days_limit
 
     def clean_old(self) -> None:
         try:
