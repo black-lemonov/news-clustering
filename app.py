@@ -8,7 +8,7 @@ from flask import Flask, render_template
 
 from pre_start import repository, start_parsers, stop_parsers, try_create_db
 
-from repository import News
+from repository import Article
 from util import news_to_tuple
 
 app = Flask(__name__)
@@ -55,7 +55,7 @@ def index():
     
     # загрузка новостей из бд:
     clusters_headers = repository.get_clusters_headers()
-    clusters_news: list[list[News]] = [
+    clusters_news: list[list[Article]] = [
         repository.get_news_by_cluster(news.cluster_n)
         for news in clusters_headers
     ]

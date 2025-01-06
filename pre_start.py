@@ -8,104 +8,96 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from dotenv import load_dotenv
 
-from clustering.clustering_db import ClusteringDB
-from logger import SimpleLogger
-from parsing.parsers import K24Parser, KNParser, KTParser, LKParser
-from repository import SQLiteRepository
-
+from clustering.dbscan import DBSCANAlgorithm
+from controllers.app_controller import AppController
+from controllers.clustering_controller import ClusteringController
+from controllers.parser_controller import ParserController
+from db_context.sqlite_context import SQLiteDBContext
+from parsing.k24_spider import K24Spider
+from parsing.kn_spider import KNSpider
+from parsing.kt_spider import KTSpider
+from parsing.lk_spider import LKSpider
+from vectorization.stemmed_vectorizer import StemmedVectorizer
 
 nltk.download('stopwords')
 
 load_dotenv()
 DB_PATH = os.getenv("DB_PATH")
 LOGGER_CONFIG_PATH = os.getenv("LOGGER_CONFIG_PATH")
-PARSER_INTERVAL = 300
-# CLEANER_TIMEOUT = 5 * 24 * 3600
 
-logger = SimpleLogger.create_from_config(LOGGER_CONFIG_PATH)
 
-# cleaner_timer: Thread = Thread(
-#     target=time.sleep,
-#     args=(CLEANER_TIMEOUT,),
-#     daemon=True
-# )
+db_context = SQLiteDBContext(DB_PATH)
+parser_controller = ParserController(db_context)
+app_controller = AppController(db_context)
 
-repository = SQLiteRepository(db_path=DB_PATH, logger=logger)
+PARSE_INTERVAL = 10
+PARSING_SCHEDULER_INTERVAL = 3600
+scheduler = BackgroundScheduler()
 
-def try_create_db():
-    try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS "Articles" (
-                    "url"	TEXT,
-                    "title"	TEXT,
-                    "description"	TEXT,
-                    "date"	TEXT,
-                    "cluster_n"	INTEGER,
-                    PRIMARY KEY("url")
-                )
-                """
+
+def try_create_db() -> None:
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS "Articles" (
+                "url"	TEXT,
+                "title"	TEXT,
+                "description"	TEXT,
+                "date"	TEXT,
+                "cluster_n"	INTEGER DEFAULT -1,
+                PRIMARY KEY("url")
             )
-            conn.commit()
-    except (sqlite3.OperationalError, sqlite3.Error) as e:
-        logger.error(f"Ошибка при удалении записей: {e}")
+            """
+        )
 
 def schedule_parsers():
     async def run_parsers():
         async with httpx.AsyncClient() as http_client:
-            k24 = K24Parser(
-                repositories=[repository],
-                logger=logger,
+            k24 = K24Spider(
+                parser_controller=parser_controller,
                 http_client=http_client,
-                parse_interval_sec=PARSER_INTERVAL
+                parse_interval_sec=PARSE_INTERVAL
             )
-            kn = KNParser(
-                repositories=[repository],
-                logger=logger,
+            kn = KNSpider(
+                parser_controller=parser_controller,
                 http_client=http_client,
-                parse_interval_sec=PARSER_INTERVAL
+                parse_interval_sec=PARSE_INTERVAL
             )
-            kt = KTParser(
-                repositories=[repository],
-                logger=logger,
+            kt = KTSpider(
+                parser_controller=parser_controller,
                 http_client=http_client,
-                parse_interval_sec=PARSER_INTERVAL
+                parse_interval_sec=PARSE_INTERVAL
             )
-            lk = LKParser(
-                repositories=[repository],
-                logger=logger,
+            lk = LKSpider(
+                parser_controller=parser_controller,
                 http_client=http_client,
-                parse_interval_sec=PARSER_INTERVAL
+                parse_interval_sec=PARSE_INTERVAL
             )
-            clustering_db = ClusteringDB(DB_PATH)
+            text_vectorizer = StemmedVectorizer()
+            clustering_algorithm = DBSCANAlgorithm()
+            clustering_controller = ClusteringController(db_context, text_vectorizer, clustering_algorithm)
 
-            await parse_all(k24, kn, kt, lk, clustering_db)
+            await parse_all(k24, kn, kt, lk, clustering_controller)
 
     asyncio.run(run_parsers())
 
-async def parse_all(k24, kn, kt, lk, clustering_db):
+
+async def parse_all(k24, kn, kt, lk, clustering_controller):
     await asyncio.gather(
         k24.parse(),
         kn.parse(),
         kt.parse(),
         lk.parse()
     )
-    clustering_db.run()
-
-scheduler = BackgroundScheduler()
-scheduler.add_job(schedule_parsers, 'interval', seconds=PARSER_INTERVAL)
+    clustering_controller.add_clusters()
 
 def start_parsers():
-    logger.info("Запуск парсеров...")
+    scheduler.add_job(schedule_parsers, 'interval', seconds=PARSING_SCHEDULER_INTERVAL)
     scheduler.start()
 
 def stop_parsers():
     scheduler.shutdown()
-    logger.info("Парсеры остановлены")
 
-if __name__ == '__main__':
-    # clustering_db = ClusteringDB(DB_PATH)
-    # clustering_db.run()
-    schedule_parsers()
+if __name__ == "__main__":
+    start_parsers()
