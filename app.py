@@ -7,7 +7,7 @@ Flask-приложение
 from flask import Flask, render_template
 
 from controllers.parser_controller import Article
-from pre_start import app_controller, start_parsers, stop_parsers
+from pre_start import app_controller
 
 app = Flask(__name__)
 
@@ -26,8 +26,4 @@ def index():
 
 
 if __name__ == "__main__":
-    try:
-        start_parsers()
-        app.run(debug=True)
-    except (KeyboardInterrupt, SystemExit):
-        stop_parsers()
+    app.run(debug=True)
