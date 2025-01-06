@@ -6,21 +6,21 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
-        <link rel="shortcut icon" href="static\Н.ico">
-        <link rel="stylesheet" href="static\styles.css">
+        <link rel="shortcut icon" href="/static/Н.ico">
+        <link rel="stylesheet" href="/static/styles.css">
     </head>
     <body>
         <header>
             <h1 class="main-header">{{title}}</h1>
         </header>
         <main>
-            {% for _, _title, _date in headers %}
-                <h3 class="cluster__header_green"> {{_title}} <i>{{_date}}</i> </h3>
+            {% for article in headers %}
+                <h3 class="cluster__header_green"> {{ article.title }} <i>{{ article.date }}</i> </h3>
                 <ul class="cluster_green">
-                {% for _url, _title, _date in news[loop.index-1] %}
+                {% for article in articles[loop.index-1] %}
                     <li class="cluster__news_green">
-                        <a class="src-link_green" href="{{_url}}">{{_title}}</a>
-                        <i class="date_green">{{_date}}</i>
+                        <a class="src-link_green" href="{{ article.url }}">{{ article.title }}</a>
+                        <i class="date_green">{{ article.date }}</i>
                     </li>
                 {% endfor %}
                 </ul>
