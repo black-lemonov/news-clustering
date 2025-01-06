@@ -3,6 +3,6 @@ CREATE TABLE IF NOT EXISTS "Articles" (
     "title"	TEXT,
     "description"	TEXT,
     "date"	TEXT,
-    "cluster_n"	INTEGER,
+    "cluster_n"	INTEGER DEFAULT -1,
     PRIMARY KEY("url")
 )
