@@ -1,18 +1,15 @@
+import os
+
 import nltk
+from flask.cli import load_dotenv
 
 from controllers.app_controller import AppController
-
-from start_parsers import scheduler, db_context
+from db_context.sqlite_context import SQLiteDBContext
 
 nltk.download('stopwords')
 
+load_dotenv()
+DB_PATH = os.getenv("DB_PATH")
+
+db_context = SQLiteDBContext(DB_PATH)
 app_controller = AppController(db_context)
-
-def start_parsers():
-    scheduler.start()
-
-def stop_parsers():
-    scheduler.shutdown()
-
-if __name__ == '__main__':
-    start_parsers()
