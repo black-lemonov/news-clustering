@@ -1,8 +1,15 @@
+import pytest
+
 from controllers.cleaner_controller import CleanerController
-from db_context.sqlite_context import SQLiteDBContext
 
+DAYS_LIMIT = 0
 
-def test_cleaner():
-    db_context = SQLiteDBContext("../resources/articles.db")
-    cleaner = CleanerController(db_context, days_limit=10)
+@pytest.fixture
+def cleaner(db_context):
+    yield CleanerController(db_context, DAYS_LIMIT)
+
+def test_clean_old(cleaner, db_context):
+    rows_before = db_context.count_rows()
     cleaner.clean_old()
+    rows_after = db_context.count_rows()
+    assert rows_before > rows_after

@@ -1,16 +1,24 @@
+import pytest
+
 from clustering.dbscan import DBSCANAlgorithm
 from controllers.clustering_controller import ClusteringController
-from db_context.sqlite_context import SQLiteDBContext
 from vectorization.stemmed_vectorizer import StemmedVectorizer
 
 
-def test_clustering():
-    db_context = SQLiteDBContext("../resources/articles.db")
-    text_vectorizer = StemmedVectorizer()
-    clustering_algorithm = DBSCANAlgorithm()
-    clustering_controller = ClusteringController(
-        db_context,
-        text_vectorizer,
-        clustering_algorithm
-    )
+@pytest.fixture
+def text_vectorizer():
+    yield StemmedVectorizer()
+
+@pytest.fixture
+def clustering_algorithm():
+    yield DBSCANAlgorithm()
+
+@pytest.fixture
+def clustering_controller(db_context, text_vectorizer, clustering_algorithm):
+    yield ClusteringController(db_context, text_vectorizer, clustering_algorithm)
+
+def test_add_clusters(clustering_controller):
+    clusters_before = clustering_controller.count_clusters()
     clustering_controller.add_clusters()
+    clusters_after = clustering_controller.count_clusters()
+    assert clusters_before < clusters_after
