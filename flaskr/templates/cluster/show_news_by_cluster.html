@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block header %}
+	<h1> {% block title %} {{ cluster.title }} {% endblock %} - дата появления: {{ cluster.first_article_date }} </h1>
+    <nav>
+        <a href="{{ url_for("news.index") }}"> Назад </a>
+    </nav>
+{% endblock %}
+
+{% block content %}
+	{% for article in articles_by_cluster %}
+        <article class="cluster-article">
+            <header class="cluster-article__title">
+                <h3>
+                    {{ article.title }}
+                </h3>
+            </header>
+            <footer>
+                <p class="cluster-article__date">
+                    Дата: <time datetime="{{ article.date }}">{{ article.date }}</time>
+                </p>
+                <p class="cluster-article__url">
+                    <a href="{{ article.url }}"> Источник </a>
+                </p>
+            </footer>
+        </article>
+    {% endfor %}
+{% endblock %}
