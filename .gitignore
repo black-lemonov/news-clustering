@@ -2,3 +2,5 @@ __pycache__
 .venv
 data.log
 poetry.lock
+.idea
+.env
