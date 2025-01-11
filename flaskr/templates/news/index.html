@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h2>
+    {% block title %} Все новости {% endblock %}
+    </h2>
+{% endblock %}
+{% block content %}
+	{% for cluster in clusters %}
+        <article class="cluster">
+            <header class="cluster__header">
+                <h3>
+                    <a href="{{ url_for("cluster.show_news_by_cluster", cluster_id=cluster.id) }}">{{ cluster.title }}</a>
+                </h3>
+            </header>
+            <div class="cluster__summary"><p>{{ cluster.summary }}</p></div>
+            <footer class="cluster__date">
+                <p>
+                    Дата: <time datetime="{{ cluster.first_article_date }}">{{ cluster.first_article_date }}</time>
+                </p>
+            </footer>
+        </article>
+	{% endfor %}
+{% endblock %}
