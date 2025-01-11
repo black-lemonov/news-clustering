@@ -1,13 +1,27 @@
-### Для загрузки библиотек
-
-Необходимо установить poetry и выполнить команду:
+### Команды
+- Создание БД:
 ```shell
-poetry install
+flask -A flaskr init-db
+```
+- Запуск приложения:
+```shell
+flask -A flaskr run
+```
+- Запуск парсеров:
+```shell
+flask -A flaskr run-parsers
+```
+- Запуск алгоритма кластеризации:
+```shell
+flask -A flaskr run-algorithm
 ```
 
-### Для запуска приложения
-
-Необходимо запустить файл fl_site.py:
+### Запуск celery:
+Сначала запустить рабочих:
 ```shell
-python3 app.py
+celery -A flaskr.make_celery worker --loglevel=INFO
+```
+Затем запустить фоновые задачи
+```shell
+celery -A flaskr.make_celery beat --loglevel=INFO
 ```
