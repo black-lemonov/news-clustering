@@ -1,6 +1,0 @@
-test/parsers/test_k24.py::test_parse
-test/parsers/test_kn.py::test_parse
-test/parsers/test_kt.py::test_parse
-test/parsers/test_lk.py::test_parse
-test/test_clustering.py::test_add_clusters
-test/test_cleaner.py::test_clean_old
